@@ -1,6 +1,7 @@
 from random import *
+import pandas as pd
 
-sexo = ['Hombre', 'Mujer']
+sexo = ['HOMBRE', 'MUJER']
 
 nombreHombre = ["ANTONIO",
                 "MANUEL",
@@ -255,14 +256,21 @@ apellidos = ["MARTINEZ",
              "ORTIZ",
              "CORDON"]
 
-grado_escolar = ["primero", "segundo", "tercero", "cuarto", "quinto", "sexto", "septimo", "octavo", "noveno", "decimo",
-                 "once"]
+departamentos = ["AMAZONAS", "ANTIOQUIA", "ARAUCA", "ATLÁNTICO", "BOGOTÁ", "BOLÍVAR", "BOLÍVAR", "BOYACÁ", "CALDAS", "CAQUETÁ", "CASANARE", "CAUCA", "CESAR", "CHOCÓ", "CÓRDOBA", "CUNDINAMARCA", "GUANÍA", "GUAVIARE", "HUILA", "LA GUAJIRA", "MAGDALENA", "META", "NARIÑO", "NORTE DE SANTANDER", "PUTUMAYO", "QUINDÍO", "RISARALDA", "SAN ANDRÉS Y PROVIDENCIA", "SANTANDER", "SUCRE", "TOLIMA", "VALLE DEL CAUCA", "CAUPÉS", "VICHADA"]
 
-exito = [True, False]
+grado_escolar = ["PRIMERO", "SEGUNDO", "TERCERO", "CUARTO", "QUINTO", "SEXTO", "SEPTIMO", "OCTAVO", "NOVENO", "DECIMO", "ONCE"]
+
+exito, reanudar = [True, False], [True, False]
+
+def reanuda(año_actual):
+    año_reanuda = año_actual + randrange(2, 10)
+    if reanudar[randrange(len(reanudar))]:
+        return año_reanuda
+    return año_actual
 
 def nombreCompleto():
     apellido = apellidos[randrange(len(apellidos))]
-    if sexo[randrange(len(sexo))].__eq__('Hombre'):
+    if sexo[randrange(len(sexo))].__eq__('HOMBRE'):
         nombre = nombreHombre[randrange(len(nombreHombre))] + " " + apellido + " " + apellido
     else:
         nombre = nombreMujer[randrange(len(nombreMujer))] + " " + apellido + " " + apellido
@@ -280,43 +288,60 @@ def sigue():
     return exito_
 
 def añoComienzo():
-    return randint(1994, 2005)
+    return randint(1990, 2005)
 
-n = 20
-nuevo = True
-datos = dict()
+def departamento_vive():
+    return departamentos[randrange(len(departamentos))]
 
-for i in range(n):
-    if nuevo:
-        añosPerdidosTotales = 0
-        contador_años_perdidos = 0
-        exito_ = sigue()
-        nombre = nombreCompleto()
-        gradoEscolar = grado(grado_escolar[0], nuevo, exito_)
-        año_comienzo = añoComienzo()
-        año_actual = año_comienzo
-        print(f'{nombre} | {año_comienzo} | {gradoEscolar} | {exito_}')
-        nuevo = False
+def generarDatos(cantidad, opcion):
+    nuevo = True
+    datos = dict()
+    df = pd.DataFrame(columns=['Nombre', 'Departamento', 'Año curso', 'Grado escolar', 'Aprueba?'], index=range(n))
 
-    if exito_ == False:
-        contador_años_perdidos += 1
-        añosPerdidosTotales += 1
-    else:
-        contador_años_perdidos = 0
+    for i in range(cantidad):
+        if nuevo:
+            años_receso = 0
+            añosPerdidosTotales = 0
+            contador_años_perdidos = 0
+            exito_ = sigue()
+            nombre = nombreCompleto()
+            gradoEscolar = grado(grado_escolar[0], nuevo, exito_)
+            departamento = departamento_vive()
+            año_comienzo = añoComienzo()
+            año_actual = año_comienzo
+            df.iloc[i] = [nombre, departamento, año_comienzo, gradoEscolar, exito_]
 
-    if not nuevo and contador_años_perdidos < 3:
-        gradoEscolar = grado(gradoEscolar, nuevo, exito_)
-        exito_ = sigue()
-        año_actual += 1
-        print(f'{nombre} | {año_actual} | {gradoEscolar} | {exito_}')
+            nuevo = False
 
-    if (gradoEscolar.__eq__('once') and exito_) or (contador_años_perdidos == 2 and exito_ == False) or (i+1 == n):
-        graduado = True
-        if gradoEscolar != 'once':
-          añosPerdidosTotales += 1
-          graduado = False
-        nuevo = True
-        años_totales_estudio = (año_actual - año_comienzo)+1
-        datos[nombre] = [añosPerdidosTotales, años_totales_estudio, graduado]
+        if exito_ == False:
+            contador_años_perdidos += 1
+            añosPerdidosTotales += 1
+        else:
+            contador_años_perdidos = 0
 
-print(datos)
+        if not nuevo and contador_años_perdidos < 3:
+            gradoEscolar = grado(gradoEscolar, nuevo, exito_)
+            exito_ = sigue()
+            año_actual += 1
+            df.iloc[i] = [nombre, departamento, año_actual, gradoEscolar, exito_]
+
+        if (gradoEscolar.__eq__('ONCE') and exito_) or (contador_años_perdidos == 2 and exito_ == False) or (i+1 == n) or (año_actual == 2022):
+            graduado = True
+            nuevo = True
+
+            sireanuda = reanuda(año_actual)
+            if gradoEscolar != 'ONCE' and exito_ == False and sireanuda > año_actual and año_actual < 2022:
+                nuevo = False
+                contador_años_perdidos = 0
+                años_receso += sireanuda - año_actual
+                año_actual = sireanuda
+            elif ((gradoEscolar != 'ONCE' and exito_ == False) or (gradoEscolar == 'ONCE' and contador_años_perdidos == 2 and exito_ == False)) and año_actual < 2022:
+                añosPerdidosTotales += 1
+                graduado = False
+
+            años_totales_estudio = ((año_actual - año_comienzo) + 1) - años_receso
+            datos[nombre] = [añosPerdidosTotales, años_totales_estudio, graduado]
+
+    if opcion == 1:
+        return datos
+    return df
