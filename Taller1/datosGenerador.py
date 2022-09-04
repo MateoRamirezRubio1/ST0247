@@ -1,5 +1,6 @@
 from random import *
 import pandas as pd
+from prettytable import PrettyTable
 
 sexo = ['HOMBRE', 'MUJER']
 
@@ -269,11 +270,12 @@ def reanuda(año_actual):
     return año_actual
 
 def nombreCompleto():
-    apellido = apellidos[randrange(len(apellidos))]
+    apellido1 = apellidos[randrange(len(apellidos))]
+    apellido2 = apellidos[randrange(len(apellidos))]
     if sexo[randrange(len(sexo))].__eq__('HOMBRE'):
-        nombre = nombreHombre[randrange(len(nombreHombre))] + " " + apellido + " " + apellido
+        nombre = nombreHombre[randrange(len(nombreHombre))] + " " + apellido1 + " " + apellido2
     else:
-        nombre = nombreMujer[randrange(len(nombreMujer))] + " " + apellido + " " + apellido
+        nombre = nombreMujer[randrange(len(nombreMujer))] + " " + apellido1 + " " + apellido2
     return nombre
 
 def grado(gradoEscolar, nuevo, pasa):
@@ -293,12 +295,21 @@ def añoComienzo():
 def departamento_vive():
     return departamentos[randrange(len(departamentos))]
 
-def generarDatos(cantidad, opcion):
+def generarDatos(cantidad):
+    # Se inicializan variables
     nuevo = True
     datos = dict()
-    df = pd.DataFrame(columns=['Nombre', 'Departamento', 'Año curso', 'Grado escolar', 'Aprueba?'], index=range(n))
+    arreglo_de_datos = []
 
     for i in range(cantidad):
+        # 2: Continuar el historial de la persona creada
+        if not nuevo and contador_años_perdidos < 3:
+            gradoEscolar = grado(gradoEscolar, nuevo, exito_)
+            exito_ = sigue()
+            año_actual += 1
+            arreglo_de_datos.append([nombre, departamento, año_actual, gradoEscolar, exito_])
+
+        # 1: Crear personas nuevas
         if nuevo:
             años_receso = 0
             añosPerdidosTotales = 0
@@ -309,39 +320,39 @@ def generarDatos(cantidad, opcion):
             departamento = departamento_vive()
             año_comienzo = añoComienzo()
             año_actual = año_comienzo
-            df.iloc[i] = [nombre, departamento, año_comienzo, gradoEscolar, exito_]
-
+            arreglo_de_datos.append([nombre, departamento, año_comienzo, gradoEscolar, exito_])
             nuevo = False
 
-        if exito_ == False:
+        # 3: Validar si aprobó o no el curso actual para contabilizar datos de años perdidos
+        if not exito_ and contador_años_perdidos < 3:
             contador_años_perdidos += 1
             añosPerdidosTotales += 1
         else:
             contador_años_perdidos = 0
 
-        if not nuevo and contador_años_perdidos < 3:
-            gradoEscolar = grado(gradoEscolar, nuevo, exito_)
-            exito_ = sigue()
-            año_actual += 1
-            df.iloc[i] = [nombre, departamento, año_actual, gradoEscolar, exito_]
-
-        if (gradoEscolar.__eq__('ONCE') and exito_) or (contador_años_perdidos == 2 and exito_ == False) or (i+1 == n) or (año_actual == 2022):
+        # Parar el historial de la persona si se gradua, si pierde más de 2 años o si se acaba el ciclo
+        if (gradoEscolar.__eq__('ONCE') and exito_) or (contador_años_perdidos > 2 and not exito_) or (i+1 == cantidad) or (año_actual == 2022):
             graduado = True
             nuevo = True
 
+            # Si la persona no es graduada se valida si despues de un periodo retome los estudios
             sireanuda = reanuda(año_actual)
-            if gradoEscolar != 'ONCE' and exito_ == False and sireanuda > año_actual and año_actual < 2022:
+            if (gradoEscolar != 'ONCE' and not exito_ and sireanuda > año_actual and año_actual < 2022) or (gradoEscolar != 'ONCE' and i+1 == cantidad):
                 nuevo = False
+                graduado = False
                 contador_años_perdidos = 0
                 años_receso += sireanuda - año_actual
                 año_actual = sireanuda
-            elif ((gradoEscolar != 'ONCE' and exito_ == False) or (gradoEscolar == 'ONCE' and contador_años_perdidos == 2 and exito_ == False)) and año_actual < 2022:
-                añosPerdidosTotales += 1
+            # Si la persona no graduada no retoma sus estudios queda como no graduado
+            elif ((gradoEscolar != 'ONCE' and not exito_) or (gradoEscolar == 'ONCE' and contador_años_perdidos > 2 and not exito_)) and año_actual < 2022:
                 graduado = False
 
             años_totales_estudio = ((año_actual - año_comienzo) + 1) - años_receso
+
+            # Se ingresan los datos de entrada para el modelo de probabilidad en un diccionario
             datos[nombre] = [añosPerdidosTotales, años_totales_estudio, graduado]
 
-    if opcion == 1:
-        return datos
-    return df
+    # Se crea un dataframe con el arreglo de datos creado para relizar la estadística
+    df = pd.DataFrame(arreglo_de_datos, columns=('Nombre', 'Departamento', 'Año curso', 'Grado escolar', 'Aprueba?'))
+
+    return datos, df
