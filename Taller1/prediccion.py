@@ -20,16 +20,12 @@ def predict(modelData, dfPersonData : pd):
     model.fit(training_data, target_data, epochs=1000, verbose=False)  # Descripción del entrenamiento
 
     # Evaluar el modelo
-    scores = model.evaluate(training_data, target_data, verbose=False)
-
     real_data = np.array(modelData, "float32")
 
     resultado = model.predict(real_data, verbose=False)
-    model.summary()
 
     # Agregar resultados del modelo a una nueva columna del dataframe
-    dfPersonData['Probabilidad Graduarse'] = 'null'
-    for i in range(len(modelData)):
-        dfPersonData.iloc[i, 7] = round(resultado[i][0]*100)
+    dfPersonData['Probabilidad Graduarse'] = resultado*100
+    dfPersonData['Probabilidad Graduarse'] = round(dfPersonData['Probabilidad Graduarse'])
 
     return dfPersonData
