@@ -1,6 +1,5 @@
 from random import *
 import pandas as pd
-from prettytable import PrettyTable
 
 sexo = ['HOMBRE', 'MUJER']
 
@@ -265,18 +264,19 @@ exito, reanudar = [True, False], [True, False]
 
 def reanuda(año_actual):
     año_reanuda = año_actual + randrange(2, 10)
-    if reanudar[randrange(len(reanudar))]:
+    if reanudar[randrange(len(reanudar))] and año_reanuda < 2022:
         return año_reanuda
     return año_actual
 
 def nombreCompleto():
     apellido1 = apellidos[randrange(len(apellidos))]
     apellido2 = apellidos[randrange(len(apellidos))]
-    if sexo[randrange(len(sexo))].__eq__('HOMBRE'):
+    sexoPersona = sexo[randrange(len(sexo))]
+    if sexoPersona.__eq__('HOMBRE'):
         nombre = nombreHombre[randrange(len(nombreHombre))] + " " + apellido1 + " " + apellido2
     else:
         nombre = nombreMujer[randrange(len(nombreMujer))] + " " + apellido1 + " " + apellido2
-    return nombre
+    return nombre, sexoPersona
 
 def grado(gradoEscolar, nuevo, pasa):
     if nuevo:
@@ -290,7 +290,7 @@ def sigue():
     return exito_
 
 def añoComienzo():
-    return randint(1990, 2005)
+    return randint(1985, 2005)
 
 def departamento_vive():
     return departamentos[randrange(len(departamentos))]
@@ -300,6 +300,8 @@ def generarDatos(cantidad):
     nuevo = True
     datos = dict()
     arreglo_de_datos = []
+    arreglo_de_datos_especificos = []
+    datosModelo = []
 
     for i in range(cantidad):
         # 2: Continuar el historial de la persona creada
@@ -311,17 +313,22 @@ def generarDatos(cantidad):
 
         # 1: Crear personas nuevas
         if nuevo:
+            veces_reanuda = 0
             años_receso = 0
             añosPerdidosTotales = 0
             contador_años_perdidos = 0
             exito_ = sigue()
-            nombre = nombreCompleto()
+            persona = nombreCompleto()
+            nombre = persona[0]
+            sexoPersona = persona[1]
             gradoEscolar = grado(grado_escolar[0], nuevo, exito_)
             departamento = departamento_vive()
             año_comienzo = añoComienzo()
             año_actual = año_comienzo
-            arreglo_de_datos.append([nombre, departamento, año_comienzo, gradoEscolar, exito_])
             nuevo = False
+
+            # Agregar datos al arreglo de datos generales para la tabla
+            arreglo_de_datos.append([nombre, departamento, año_comienzo, gradoEscolar, exito_])
 
         # 3: Validar si aprobó o no el curso actual para contabilizar datos de años perdidos
         if not exito_ and contador_años_perdidos < 3:
@@ -343,16 +350,24 @@ def generarDatos(cantidad):
                 contador_años_perdidos = 0
                 años_receso += sireanuda - año_actual
                 año_actual = sireanuda
+                veces_reanuda += 1
             # Si la persona no graduada no retoma sus estudios queda como no graduado
-            elif ((gradoEscolar != 'ONCE' and not exito_) or (gradoEscolar == 'ONCE' and contador_años_perdidos > 2 and not exito_)) and año_actual < 2022:
+            elif (gradoEscolar != 'ONCE') or (gradoEscolar.__eq__('ONCE') and (contador_años_perdidos > 2 or i+1 == cantidad or año_actual == 2022) and not exito_):
                 graduado = False
 
             años_totales_estudio = ((año_actual - año_comienzo) + 1) - años_receso
 
-            # Se ingresan los datos de entrada para el modelo de probabilidad en un diccionario
-            datos[nombre] = [añosPerdidosTotales, años_totales_estudio, graduado]
+            if nuevo or i+1 == cantidad:
+                # Agregar datos al arreglo de datos generales para la tabla
+                arreglo_de_datos_especificos.append([nombre, sexoPersona, departamento, años_totales_estudio, añosPerdidosTotales, año_actual, graduado])
+                # Se ingresan los datos de entrada para el modelo de probabilidad en un arreglo
+                datosModelo.append([añosPerdidosTotales/23, veces_reanuda/5, años_totales_estudio/33, 1 if graduado else 0])
+            
+            datos[nombre] = [añosPerdidosTotales, veces_reanuda, años_totales_estudio, graduado]
+            
 
-    # Se crea un dataframe con el arreglo de datos creado para relizar la estadística
-    df = pd.DataFrame(arreglo_de_datos, columns=('Nombre', 'Departamento', 'Año curso', 'Grado escolar', 'Aprueba?'))
+    # Se crean los dataframes con los arreglos de datos creados para relizar la estadística
+    dfDatosGenerales = pd.DataFrame(arreglo_de_datos, columns=('Nombre', 'Departamento', 'Año curso', 'Grado escolar', 'Aprueba?'))
+    dfDatosEspecificos = pd.DataFrame(arreglo_de_datos_especificos, columns=('Nombre', 'Sexo', 'Departamento', 'Años totales de estudio', 'Años totales perdidos', 'Ultimo Año Estudiado', 'Graduado?'))
 
-    return datos, df
+    return datos, dfDatosGenerales, datosModelo, dfDatosEspecificos
