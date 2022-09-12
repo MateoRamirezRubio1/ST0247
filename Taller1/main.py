@@ -25,16 +25,16 @@ if __name__ == "__main__":
         for i in opcionUsuario:
             if i.__eq__('1'):
                 print('\nDatos generales:-----------------------------------------------------------------------')
-                print(dfDatosGenerales)
+                print(dfDatosGenerales.sort_values('Nombre'))
             elif i.__eq__('2'):
                 print('\nDatos especificos:---------------------------------------------------------------------')
-                print(dfDatosEspecificos)
+                print(dfDatosEspecificos.sort_values('Nombre'))
             elif i.__eq__('3'):
                 simodelo = True
                 # Modelo de Predicción probabilidad de graduarse o no graduarse
                 dfModeloDatosEspecificos = predict(datosModelo, dfDatosEspecificos)
                 print('\nDatos especificos con la probabilidad de graduarse por cada estudiante:----------------')
-                print(dfModeloDatosEspecificos)
+                print(dfModeloDatosEspecificos.sort_values('Nombre'))
             elif i.__eq__('4'):
                 if simodelo:
                     # Estadistica
